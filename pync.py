@@ -37,8 +37,11 @@ def forward(source, destination):
         if string:
             destination.sendall(string)
         else:
-            source.shutdown(socket.SHUT_RD)
-            destination.shutdown(socket.SHUT_WR)
+            source.close()
+            destination.close()
+#            source.shutdown(socket.SHUT_RD)
+#            destination.shutdown(socket.SHUT_WR)
+
 
 if __name__ == '__main__':
     main('proxy.ini', 'error.log')
