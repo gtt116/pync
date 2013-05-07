@@ -1,14 +1,20 @@
 import socket
 import sys
+import signal
 import thread
 
 def main(setup, error):
     sys.stderr = file(error, 'a')
     for settings in parse(setup):
+        print settings
         thread.start_new_thread(server, settings)
-    lock = thread.allocate_lock()
-    lock.acquire()
-    lock.acquire()
+
+    try:
+        signal.pause()
+    except KeyboardInterrupt:
+        print "Ctrl + C: exit nicely...\n"
+        sys.exit(0)
+
 
 def parse(setup):
     settings = list()
@@ -16,6 +22,7 @@ def parse(setup):
         parts = line.split()
         settings.append((parts[0], int(parts[1]), int(parts[2])))
     return settings
+
 
 def server(*settings):
     dock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,8 +34,7 @@ def server(*settings):
         server_socket.connect((settings[0], settings[1]))
         thread.start_new_thread(forward, (client_socket, server_socket))
         thread.start_new_thread(forward, (server_socket, client_socket))
-#    finally:
-#        thread.start_new_thread(server, settings)
+
 
 def forward(source, destination):
     string = ' '
@@ -39,8 +45,6 @@ def forward(source, destination):
         else:
             source.close()
             destination.close()
-#            source.shutdown(socket.SHUT_RD)
-#            destination.shutdown(socket.SHUT_WR)
 
 
 if __name__ == '__main__':
