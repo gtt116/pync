@@ -2,6 +2,8 @@ import socket
 import sys
 import signal
 import thread
+import eventlet
+
 
 def main(setup, error):
     for settings in parse(setup):
@@ -27,15 +29,14 @@ def server(*settings):
     local_port = settings[2]
     host_ip = settings[0]
     host_port = settings[1]
-    dock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    dock_socket.bind(('', local_port))
-    dock_socket.listen(5)
+
+    dock_socket = eventlet.listen(('0.0.0.0', local_port))
     while True:
+        print 'New client'
         client_socket = dock_socket.accept()[0]
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.connect((host_ip, host_port))
-        thread.start_new_thread(forward, (client_socket, server_socket))
-        thread.start_new_thread(forward, (server_socket, client_socket))
+        server_socket = eventlet.connect((host_ip, host_port))
+        eventlet.spawn_n(forward, client_socket, server_socket)
+        eventlet.spawn_n(forward, server_socket, client_socket)
 
 
 def forward(source, destination):
@@ -46,8 +47,8 @@ def forward(source, destination):
         if not string:
             break
         destination.sendall(string)
-    source.close()
-    destination.close()
+    source.shutdown(socket.SHUT_RD)
+    destination.shutdown(socket.SHUT_WR)
     print '---------'
 
 
