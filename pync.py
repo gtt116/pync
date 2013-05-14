@@ -4,7 +4,6 @@ import signal
 import thread
 
 def main(setup, error):
-    sys.stderr = file(error, 'a')
     for settings in parse(setup):
         print settings
         thread.start_new_thread(server, settings)
@@ -25,26 +24,31 @@ def parse(setup):
 
 
 def server(*settings):
+    local_port = settings[2]
+    host_ip = settings[0]
+    host_port = settings[1]
     dock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    dock_socket.bind(('', settings[2]))
+    dock_socket.bind(('', local_port))
     dock_socket.listen(5)
     while True:
         client_socket = dock_socket.accept()[0]
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.connect((settings[0], settings[1]))
+        server_socket.connect((host_ip, host_port))
         thread.start_new_thread(forward, (client_socket, server_socket))
         thread.start_new_thread(forward, (server_socket, client_socket))
 
 
 def forward(source, destination):
-    string = ' '
-    while string:
+    print '--------'
+    while True:
         string = source.recv(1024)
-        if string:
-            destination.sendall(string)
-        else:
-            source.close()
-            destination.close()
+        print 'recv: %s' % len(string)
+        if not string:
+            break
+        destination.sendall(string)
+    source.close()
+    destination.close()
+    print '---------'
 
 
 if __name__ == '__main__':
